@@ -1,0 +1,21 @@
+FROM python:3.10
+RUN mkdir /usr/src/app
+WORKDIR /usr/src/app
+#Copying files from the HOST folder to inside CONTAINER
+#Using the COPY command here, developers need to remember to run
+# `docker-compose build` command all times that the source code was being changed
+COPY ../app/CyberDefense /usr/src/app
+# Installing requirements for CyberDefense Web application
+RUN pip install -r /usr/src/app/requirements.txt --no-cache-dir
+# Installing Mono support
+RUN apt install dirmngr ca-certificates gnupg
+RUN gpg --homedir /tmp --no-default-keyring --keyring /usr/share/keyrings/mono-official-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+RUN echo "deb [signed-by=/usr/share/keyrings/mono-official-archive-keyring.gpg] https://download.mono-project.com/repo/debian stable-buster main" | tee /etc/apt/sources.list.d/mono-official-stable.list
+RUN apt update -y
+RUN apt install -y mono-xsp4
+#Installing dos2unix
+RUN apt install -y dos2unix
+#Commands to prepare the image pull
+# docker login
+# docker tag docker-compose-cyberdefense-cyberdefense-python:latest luizsoliveira/cyberdefense:latest
+# docker push luizsoliveira/cyberdefense:latest
