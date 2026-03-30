@@ -67,7 +67,7 @@ with open(parent_dirname + "_table.csv", "w") as csvfile: #python 2.7 wb python3
 				if "batch5" in f:
 					xx = open("./res_acc/" + f, "r");
 					ss = xx.readline();
-					ss = re.findall('\d+\.\d+', ss);
+					ss = re.findall(r'\d+\.\d+', ss);
 					batch5_t = ss[0];
 					batch5_f = ss[1];
 
@@ -75,14 +75,14 @@ with open(parent_dirname + "_table.csv", "w") as csvfile: #python 2.7 wb python3
 				elif "batch10" in f:
 					xx = open("./res_acc/" + f, "r");
 					ss = xx.readline();
-					ss = re.findall('\d+\.\d+', ss);
+					ss = re.findall(r'\d+\.\d+', ss);
 					batch10_t = ss[0];
 					batch10_f = ss[1];
 
 				elif "batch20" in f:
 					xx = open("./res_acc/" + f, "r");
 					ss = xx.readline();
-					ss = re.findall('\d+\.\d+', ss);
+					ss = re.findall(r'\d+\.\d+', ss);
 					batch20_t = ss[0];
 					batch20_f = ss[1];
 

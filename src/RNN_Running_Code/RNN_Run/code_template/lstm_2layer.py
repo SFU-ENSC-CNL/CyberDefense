@@ -16,7 +16,6 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.utils.data as Data
 from sklearn.metrics import f1_score
@@ -55,7 +54,7 @@ torch.cuda.manual_seed_all(1)
 ### Hyper parameters ####
 parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
 
-num_feature = 37
+num_feature = 41
 
 if parent_dirname.find("5") != -1:
     batch_size = 5;
@@ -157,11 +156,11 @@ class RNN(nn.Module):
 
 
         if torch.cuda.is_available():
-            h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
-            c0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
+            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
         else:
-            h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size))
-            c0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size))
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
+            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
 
         x, _ = self.lstm(x, (h0, c0))  # LSTM network, c is the state
 
@@ -215,11 +214,11 @@ start = time.time()
 for epoch in range(num_epochs):
     for i, (train, labels) in enumerate(train_loader):                        # load the data
         if torch.cuda.is_available():
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cuda()  # reshape x to (time_step, batch, input_size)
-            y = Variable(labels).cuda()                                       # batch labels
+            x = train.view(sequence_length, -1, input_lstm).cuda()  # reshape x to (time_step, batch, input_size)
+            y = labels.cuda()                                       # batch labels
         else:
-            x = Variable(train.view(sequence_length, -1, input_lstm))
-            y = Variable(labels)
+            x = train.view(sequence_length, -1, input_lstm)
+            y = labels
         # Forward + Backward + Optimize
         outputs = rnn(x)                                                      # RNN output
         outputs = outputs.view(-1, 2)
@@ -245,12 +244,12 @@ rnn.eval()  # evaluation mode for testing
 yo = []
 for test, l in test_loader:
     if torch.cuda.is_available():
-        p = Variable(test.view(sequence_length, -1, input_lstm)).cuda()
+        p = test.view(sequence_length, -1, input_lstm).cuda()
     else:
-        p = Variable(test.view(sequence_length, -1, input_lstm))
+        p = test.view(sequence_length, -1, input_lstm)
     outputs2 = rnn(p)
     outputs2 = outputs2.view(-1, 2)
-    outputs2 = F.softmax(outputs2)
+    outputs2 = F.softmax(outputs2, dim=1)
 
     _, predicted = torch.max(outputs2.data, 1)
     total += l.size(0)  # l.size(0)=100

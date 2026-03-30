@@ -21,7 +21,7 @@ for f in files:
 
 	xx = open("./res_run/" + f, "r");
 	ss = xx.readline();
-	ss = re.findall('\d+\.\d+', ss);
+	ss = re.findall(r'\d+\.\d+', ss);
 	sum_time = sum_time + float(ss[0]);
 	
 print(sum_time/3600.0) ;

@@ -15,7 +15,6 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.utils.data as Data
 
@@ -30,7 +29,7 @@ def replaceNan(matrix):
         for col in range(0, matrix.shape[1]):
 
             if math.isnan(matrix[row, col]):
-                matrix[row, col] = np.float128('0')
+                matrix[row, col] = 0.0
 
     return
 def ConfusionMatrix(y_true, y_pred):
@@ -78,7 +77,7 @@ torch.cuda.manual_seed_all(1)
 
 ### Hyper parameters ####
 parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
-num_feature = 37    # number of the features for input matrix
+num_feature = 41    # number of the features for input matrix
 
 if parent_dirname.find("5") != -1:
     batch_size = 5;
@@ -196,11 +195,11 @@ class RNN(nn.Module):
         # x=input (seq_len, batch, input_size)
 
         if torch.cuda.is_available():
-            h0 = Variable(torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cuda())
-            c0 = Variable(torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cuda())
+            h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cuda()
+            c0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cuda()
         else:
-            h0 = Variable(torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cpu())
-            c0 = Variable(torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cpu())
+            h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_size)
+            c0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_size)
 
         x, _ = self.lstm(x, (h0,c0))  # LSTM network, c is the state
 
@@ -213,7 +212,7 @@ class RNN(nn.Module):
 
 
 rnn = RNN()
-start = time.clock();
+start = time.perf_counter()
 rnn.train()
 
 if torch.cuda.is_available():
@@ -249,11 +248,11 @@ for epoch in range(num_epochs):
     for i, (train, labels) in enumerate(train_loader):  
 
         if torch.cuda.is_available():
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cuda()
-            y = Variable(labels).cuda()
+            x = train.view(sequence_length, -1, input_lstm).cuda()
+            y = labels.cuda()
         else:
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cpu()
-            y = Variable(labels).cpu()
+            x = train.view(sequence_length, -1, input_lstm)
+            y = labels
 
 
         # Forward + Backward + Optimize
@@ -265,7 +264,7 @@ for epoch in range(num_epochs):
         optimizer.step()                                                      # apply gradients
  
 
-end = time.clock()
+end = time.perf_counter()
 
 
 
@@ -278,13 +277,13 @@ yo = []
 for test, l in test_loader:
 
     if torch.cuda.is_available():
-        p = Variable(test.view(sequence_length, -1, input_lstm)).cuda()
+        p = test.view(sequence_length, -1, input_lstm).cuda()
     else:
-        p = Variable(test.view(sequence_length, -1, input_lstm))
+        p = test.view(sequence_length, -1, input_lstm)
 
     outputs2 = rnn(p)
     outputs2 = outputs2.view(-1, 2)
-    outputs2 = F.softmax(outputs2)     # softmax function
+    outputs2 = F.softmax(outputs2, dim=1)     # softmax function
     # print 'output2 size:', outputs2.size()
 
     _, predicted = torch.max(outputs2.data, 1)

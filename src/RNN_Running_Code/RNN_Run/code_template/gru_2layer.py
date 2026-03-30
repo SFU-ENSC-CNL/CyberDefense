@@ -21,9 +21,6 @@ import torch.nn as nn
 
 
 
-from torch.autograd import Variable
-
-
 import torch.nn.functional as F
 
 
@@ -60,7 +57,7 @@ torch.cuda.manual_seed_all(1)
 
 ### Hyper parameters ####
 parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
-num_feature = 37    # number of the features for input matrix
+num_feature = 41    # number of the features for input matrix
 
 if parent_dirname.find("5") != -1:
     batch_size = 5;
@@ -193,9 +190,9 @@ class RNN(nn.Module):
         # x=input (seq_len, batch, input_size)
         
         if torch.cuda.is_available():
-            h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
         else:
-            h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cpu())
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
 
         x, _ = self.gru(x, h0)  # GRU network
 
@@ -245,11 +242,11 @@ for epoch in range(num_epochs):
         #x = Variable(train.view(sequence_length, -1, input_lstm)).cuda()      # reshape x to (time_step, batch, input_size)
         # y = Variable(labels).cuda()                                           # batch labels
         if torch.cuda.is_available():
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cuda()
-            y = Variable(labels).cuda()
+            x = train.view(sequence_length, -1, input_lstm).cuda()
+            y = labels.cuda()
         else:
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cpu()
-            y = Variable(labels).cpu()
+            x = train.view(sequence_length, -1, input_lstm)
+            y = labels
 
 
         # Forward + Backward + Optimize
@@ -278,14 +275,14 @@ rnn.eval()          # evaluation mode for testing
 yo = []
 for test, l in test_loader:
     if torch.cuda.is_available():
-        p = Variable(test.view(sequence_length, -1, input_lstm)).cuda()
+        p = test.view(sequence_length, -1, input_lstm).cuda()
     else:
-        p = Variable(test.view(sequence_length, -1, input_lstm))
+        p = test.view(sequence_length, -1, input_lstm)
 
-        
+
     outputs2 = rnn(p)
     outputs2 = outputs2.view(-1, 2)
-    outputs2 = F.softmax(outputs2)     # softmax function
+    outputs2 = F.softmax(outputs2, dim=1)     # softmax function
     # print 'output2 size:', outputs2.size()
 
     _, predicted = torch.max(outputs2.data, 1)

@@ -16,7 +16,6 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.utils.data as Data
 
@@ -31,7 +30,7 @@ def replaceNan(matrix):
         for col in range(0, matrix.shape[1]):
 
             if math.isnan(matrix[row, col]):
-                matrix[row, col] = np.float128('0')
+                matrix[row, col] = 0.0
 
     return
 def ConfusionMatrix(y_true, y_pred):
@@ -75,7 +74,7 @@ torch.cuda.manual_seed_all(1)
 
 ### Hyper parameters ####
 parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
-num_feature = 37    # number of the features for input matrix
+num_feature = 41    # number of the features for input matrix
 
 if parent_dirname.find("5") != -1:
     batch_size = 5;
@@ -181,9 +180,9 @@ class RNN(nn.Module):
         # Set initial states: h_0 (num_layers * num_directions, batch, hidden_size)
         # x=input (seq_len, batch, input_size)
         if torch.cuda.is_available():
-            h0 = Variable(torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cuda())
+            h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cuda()
         else:
-            h0 = Variable(torch.zeros(self.num_layers*2, x.size(1), self.hidden_size).cpu())
+            h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_size)
         #c0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
 
         x, _ = self.gru(x, h0)       # GRU network, c is the state 
@@ -196,7 +195,7 @@ class RNN(nn.Module):
 
 
 rnn = RNN()
-start = time.clock()
+start = time.perf_counter()
 rnn.train()
 if torch.cuda.is_available():
     rnn.cuda()
@@ -239,11 +238,11 @@ for epoch in range(num_epochs):
         
 
         if torch.cuda.is_available():
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cuda()      # reshape x to (time_step, batch, input_size)
-            y = Variable(labels).cuda()                                           # batch labels
+            x = train.view(sequence_length, -1, input_lstm).cuda()      # reshape x to (time_step, batch, input_size)
+            y = labels.cuda()                                           # batch labels
         else:
-            x = Variable(train.view(sequence_length, -1, input_lstm)).cpu()      # reshape x to (time_step, batch, input_size)
-            y = Variable(labels).cpu()                                           # batch labels
+            x = train.view(sequence_length, -1, input_lstm)      # reshape x to (time_step, batch, input_size)
+            y = labels                                           # batch labels
         
 
         # Forward + Backward + Optimize
@@ -254,7 +253,7 @@ for epoch in range(num_epochs):
         loss.backward()                                                       # back-propagation, compute gradients
         optimizer.step()                                                      # apply gradients
 
-end = time.clock()
+end = time.perf_counter()
 
 
 
@@ -268,12 +267,12 @@ rnn.eval()          # evaluation mode for testing
 yo = []
 for test, l in test_loader:
     if torch.cuda.is_available():
-        p = Variable(test.view(sequence_length, -1, input_lstm)).cuda()
+        p = test.view(sequence_length, -1, input_lstm).cuda()
     else:
-        p = Variable(test.view(sequence_length, -1, input_lstm))
+        p = test.view(sequence_length, -1, input_lstm)
     outputs2 = rnn(p)
     outputs2 = outputs2.view(-1, 2)
-    outputs2 = F.softmax(outputs2)     # softmax function
+    outputs2 = F.softmax(outputs2, dim=1)     # softmax function
     # print 'output2 size:', outputs2.size()
 
     _, predicted = torch.max(outputs2.data, 1)

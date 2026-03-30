@@ -28,7 +28,6 @@ import csv
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.utils.data as Data
 from sklearn.metrics import f1_score
@@ -61,7 +60,7 @@ def gru2_demo(batch_size=5, Mdl_path='./src/modelOcean'):
 
     # Hyper parameters #
     parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
-    num_feature = 37  # number of the features for input matrix
+    num_feature = 41  # number of the features for input matrix
 
     # batch_size = 5
     sequence_length = batch_size  # length of the input time sequence
@@ -139,9 +138,9 @@ def gru2_demo(batch_size=5, Mdl_path='./src/modelOcean'):
             # x=input (seq_len, batch, input_size)
 
             if torch.cuda.is_available():
-                h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
+                h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
             else:
-                h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cpu())
+                h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
 
             x, _ = self.gru(x, h0)  # GRU network
 
@@ -161,7 +160,7 @@ def gru2_demo(batch_size=5, Mdl_path='./src/modelOcean'):
     model_pkl = 'rnn-gru2-%d' % batch_size
     # torch.save(rnn.state_dict(), '%s.pkl'%model_pkl)
 
-    rnn.load_state_dict(torch.load('%s/%s.pkl' % (Mdl_path, model_pkl)))
+    rnn.load_state_dict(torch.load('%s/%s.pkl' % (Mdl_path, model_pkl), weights_only=True))
 
     start = time.time()
 
@@ -171,13 +170,13 @@ def gru2_demo(batch_size=5, Mdl_path='./src/modelOcean'):
     yo = []
     for test, l in test_loader:
         if torch.cuda.is_available():
-            p = Variable(test.view(sequence_length, -1, input_lstm)).cuda()
+            p = test.view(sequence_length, -1, input_lstm).cuda()
         else:
-            p = Variable(test.view(sequence_length, -1, input_lstm))
+            p = test.view(sequence_length, -1, input_lstm)
 
         outputs2 = rnn(p)
         outputs2 = outputs2.view(-1, 2)
-        outputs2 = F.softmax(outputs2)  # softmax function
+        outputs2 = F.softmax(outputs2, dim=1)  # softmax function
         # print 'output2 size:', outputs2.size()
 
         _, predicted = torch.max(outputs2.data, 1)
