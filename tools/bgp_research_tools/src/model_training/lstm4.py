@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-@author Zhida Li <zhidal@sfu.ca>
-@date Nov. 28, 2018
-
-@copyright Copyright (c) Nov. 28, 2018                    ZHIDA LI
-    All Rights Reserved
-
+Originally based on:
+    https://github.com/zhida-li/CyberDefense/blob/main/src/RNN_Running_Code/RNN_Run/code_template/lstm_4layer.py
 """
 ######################################################
 ##### LSTM4 (4 hidden layers) using BGP datasets #####
@@ -16,106 +12,61 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.utils.data as Data
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
-
-
-import csv
 import os
+import sys
 
-import warnings
-warnings.filterwarnings("ignore")
+src_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(src_dir)
+
+from dataset.dataset import Dataset
 
 # Set the seed for generating random numbers on all GPUs.
 torch.manual_seed(1)  
 torch.cuda.manual_seed_all(1)
 
-import sys
-# Disable
-def blockPrint():
-    sys.stdout = open(os.devnull, 'w')
-# Restore
-def enablePrint():
-    sys.stdout = sys.__stdout__
-
-blockPrint()
-
 ### Hyper parameters ####
-parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
-num_feature = 41    # number of the features for input matrix
-
-
-
-if parent_dirname.find("5") != -1:
-    batch_size = 5;
-elif parent_dirname.find("10") != -1:
-    batch_size = 10;
-else:
-    batch_size = 20;
-
-
-
-
+num_feature = 37    # number of the features for input matrix
+# batch_size = 5
+# batch_size = 10
+batch_size = 20
 sequence_length = batch_size     # length of the input time sequence
 input_size = num_feature
 input_lstm = num_feature
-
-hidden_size = HIDDEN_SIZE_1_HERE    # hidden size for fc3
-hidden_size2 = HIDDEN_SIZE_2_HERE   # hidden size for fc35
-hidden_size3 = HIDDEN_SIZE_3_HERE   # hidden size for fc4
-num_layers = NUM_OF_LAYER_HERE      # number of layers for LSTM algorithm
+hidden_size = 80    # hidden size for fc3
+hidden_size2 = 32   # hidden size for fc35
+hidden_size3 = 16   # hidden size for fc4
+num_layers = 1      # number of layers for LSTM algorithm
 num_classes = 2     # number of the class
-
-
-
-
-
-
-num_epochs = NUM_EPOCHS_HERE     # number of the epochs
-
-
+num_epochs = 30     # number of the epochs
 learning_rate = 0.001    # learning rate for optimization
 
-
-
-
-
-
-train_filename = next((f for f in os.listdir(parent_dirname) if f.endswith('train.csv')));
-test_filename = next((f for f in os.listdir(parent_dirname) if f.endswith('test.csv')));
-
-
-train_filename = str(os.path.abspath(parent_dirname)) + "/" + str(train_filename)
-test_filename = str(os.path.abspath(parent_dirname)) + "/" + str(test_filename)
-
-
-print (train_filename)
-print (test_filename)
-
-
-
-
 # Load the datasets, x: data, y: label
-trainDataset = np.loadtxt(train_filename, delimiter=",")
-train_data_x = trainDataset[:, 0:num_feature]
-train_label_y= trainDataset[:, num_feature]
+dataset = Dataset("/var/netscience/tasks/c69ff6eb-de0a-49eb-92e9-63a51210a499/DATASET.csv")
+dataset = dataset.get_normalized_zscore_dataset()
 
-testDataset = np.loadtxt(test_filename, delimiter=",")
-test_data_x = testDataset[:, 0:num_feature]
-test_label_y = testDataset[:, num_feature]
+train_dataset, test_dataset = dataset.get_train_test_datasets_anomalous_ratio(0.60)
 
+train_x, train_y = train_dataset.get_x_y()
 
-test_len = test_label_y.size;
+test_x, test_y = test_dataset.get_x_y()
 
+print(train_x.shape)
+print(train_y.shape)
 
+print(test_x.shape)
+print(test_y.shape)
 
-
+test_len = len(test_y)
 
 # Convert numpy to torch tensor
-train_data_x, train_label_y = torch.from_numpy(train_data_x), torch.from_numpy(train_label_y)
-test_data_x, test_label_y = torch.from_numpy(test_data_x), torch.from_numpy(test_label_y)
+train_data_x, train_label_y = torch.from_numpy(train_x), torch.from_numpy(train_y)
+test_data_x, test_label_y = torch.from_numpy(test_x), torch.from_numpy(test_y)
+
 # Tensor
 train_data,test_data = train_data_x.type(torch.FloatTensor), test_data_x.type(torch.FloatTensor)   # FloatTensor = 32-bit floating
 train_label,test_label = train_label_y.type(torch.LongTensor),test_label_y.type(torch.LongTensor)  # LongTensor = 64-bit integer
@@ -161,11 +112,11 @@ class RNN(nn.Module):
         # Set initial states: h_0 (num_layers * num_directions, batch, hidden_size)
         # x=input (seq_len, batch, input_size)
         if torch.cuda.is_available():
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
-            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
+            h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
+            c0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
         else:
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
-            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
+            h0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cpu())
+            c0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cpu())
 
 
         x, _ = self.lstm(x, (h0, c0))  # LSTM network, c is the state
@@ -179,7 +130,7 @@ class RNN(nn.Module):
         return x
 
 rnn = RNN()
-start = time.clock()
+start = time.perf_counter()
 rnn.train()
 
 if torch.cuda.is_available():
@@ -193,30 +144,26 @@ criterion = nn.CrossEntropyLoss()
 # Select an optimizer
 optimizer = torch.optim.RMSprop(rnn.parameters(), lr=learning_rate)           # or Adam 
 
-
-
-
-print ("batch size : " , batch_size);
-print ("test_len : " , test_len);
-print ("hidden_size1 : " , hidden_size);
-print ("hidden_size2 : " , hidden_size2);
+print ("batch size : " , batch_size)
+print ("test_len : " , test_len)
+print ("hidden_size1 : " , hidden_size)
+print ("hidden_size2 : " , hidden_size2)
 print ("hidden_size3 : " , hidden_size3);
-
-
 
 
 start = time.time()
 
-
 ### Train the model ###
 for epoch in range(num_epochs):
     for i, (train, labels) in enumerate(train_loader):                        # load the data
+        #The last batch will have a size less than sequence_length
+        batch_size_on_this_sample = train.shape[0]
         if torch.cuda.is_available():
-            x = train.view(sequence_length, -1, input_lstm).cuda()      # reshape x to (time_step, batch, input_size)
-            y = labels.cuda()                                           # batch labels
+            x = Variable(train.view(batch_size_on_this_sample, -1, input_lstm)).cuda()      # reshape x to (time_step, batch, input_size)
+            y = Variable(labels).cuda()                                           # batch labels
         else:
-            x = train.view(sequence_length, -1, input_lstm)      # reshape x to (time_step, batch, input_size)
-            y = labels                                           # batch labels
+            x = Variable(train.view(batch_size_on_this_sample, -1, input_lstm)).cpu()      # reshape x to (time_step, batch, input_size)
+            y = Variable(labels).cpu()                                           # batch labels
 
         # Forward + Backward + Optimize
         outputs = rnn(x)                                                      # RNN output
@@ -227,7 +174,7 @@ for epoch in range(num_epochs):
         optimizer.step()                                                      # apply gradients
 
 
-end = time.clock()
+end = time.perf_counter()
 
 
 ### Test the model using evaluation mode ###
@@ -236,45 +183,57 @@ total = 0
 
 rnn.eval()          # evaluation mode for testing
 yo = []
-for test, l in test_loader:
+new_yo=[]
+for i, (test, l) in enumerate(test_loader):
+    #The last batch will have a size less than sequence_length
+    batch_size_on_this_sample = test.shape[0]
     if torch.cuda.is_available():
-        p = test.view(sequence_length, -1, input_lstm).cuda()
+        p = Variable(test.view(batch_size_on_this_sample, -1, input_lstm)).cuda()
     else:
-        p = test.view(sequence_length, -1, input_lstm)
+        p = Variable(test.view(batch_size_on_this_sample, -1, input_lstm))
+    
+    #Checking inhomogeneous
+    # if len(p) < batch_size:
+    #     continue
+    
+    # print(i, p)
     outputs2 = rnn(p)
     outputs2 = outputs2.view(-1, 2)
-    outputs2 = F.softmax(outputs2, dim=1)     # softmax function
+    outputs2 = F.softmax(outputs2)     # softmax function
     # print 'output2 size:', outputs2.size()
-
     _, predicted = torch.max(outputs2.data, 1)
     total += l.size(0)  # l.size(0)=100
+    
+    #Changed
     if torch.cuda.is_available():
         predicted = predicted.cpu()
+    # else:
+    #     predicted = predicted.cpu()
+    
     correct += (predicted == l).sum()
     predicted_np = predicted.numpy()
-    yo.append(predicted_np)                # predicted labels, yo shape is (1, 72, 100, 1)
+    # yo.append(predicted_np) # predicted labels, yo shape is (1, 72, 100, 1)
+    yo.extend(predicted_np)
+    
 
-yo = np.array([yo]).reshape(test_len, -1) 
+
+# yo = np.array([yo]).reshape(test_len, -1)
+yo = np.array(yo).reshape(-1)
 yo_test = test_label_y.numpy()
+# To do: remove this 
+# yo_test = yo_test[:len(yo)]
 acc = accuracy_score(yo_test, yo)
 fScore = f1_score(yo_test, yo)
 
 
 # Save the accuracy and F-Score
-with open(parent_dirname + "_accuracy.txt", "w") as text_file:
-    text_file.write("Accuracy: %.4f, Fsocre %.4f" % (acc*100, fScore*100))
+with open("accuracy.txt", "w") as text_file:
+    text_file.write("Accuracy: %.4f, Fscore %.4f" % (acc*100, fScore*100))
 
 
 # Save the running time
-with open(parent_dirname + "_runtime.txt", "w") as text_file:
+with open("runtime.txt", "w") as text_file:
     text_file.write("Run Time: %.4f" % (end-start))
-
-
-
 
 model_pkl = 'rnn-lstm4-%d' % sequence_length
 torch.save(rnn.state_dict(), '%s.pkl'%model_pkl)
-
-
-
-

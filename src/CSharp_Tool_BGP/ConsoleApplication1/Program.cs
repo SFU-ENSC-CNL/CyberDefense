@@ -17,12 +17,41 @@ namespace ConsoleApplication1
         /// The main function is the starting point for the compiler to start compiling the code
         /// </summary>
         /// <param name="args"> The argument list that the user might provide to the main</param>
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             
             List<pins> PINS = new List<pins>();
 			String file_name = "DUMP";
+            String output_file_name = "DUMP";
             int brojac = 0;
+
+            //Exit code = 0 ==> SUCCESS
+            //Exit code = 1 ==> FAILED
+
+            //Parsing Parameters
+            if (args != null && args.Length > 0)
+            {
+                // Checking if INPUT_FILE_PATH was passed by parameter
+                file_name = args[0];
+                Console.WriteLine("INPUT_FILE_PATH parameter was received: " + file_name);
+
+                // Checking if OUTPUT_FILE_PATH was passed by parameter
+                if (args.Length > 1) {
+                    output_file_name = args[1];
+                } else {
+                    // If was not passed, the output files will be
+                    // placed in the same path of the input files
+                    output_file_name = args[0];
+                }
+                Console.WriteLine("OUTPUT_FILE_PATH parameter was set to: " + output_file_name);
+            }
+
+            //Checking if INPUT_FILE_PATH exists
+            if (!File.Exists(file_name)) {
+                Console.WriteLine("FATAL ERROR: Specified INPUT_FILE_PATH not exists: " + file_name);
+                return 1;
+            }
+            
 
 
             // varijabla koju cemo koristiti, choose FROM AS
@@ -573,8 +602,8 @@ namespace ConsoleApplication1
             //Writing to the stdout//
             /////////////////////////
 
-            TextWriter streamwriter1 = new StreamWriter(file_name+ "_out.txt");
-            TextWriter streamwriter2 = new StreamWriter(file_name + "_featureselection.txt");
+            TextWriter streamwriter1 = new StreamWriter(output_file_name+ "_out.txt");
+            TextWriter streamwriter2 = new StreamWriter(output_file_name + "_featureselection.txt");
             //TextWriter streamwriter1 = new StreamWriter(args[1]);
             //TextWriter streamwriter2 = new StreamWriter(args[1] + "_featureselection");
             for (int i = 0; i < PINS.Count; i++)
@@ -769,6 +798,7 @@ namespace ConsoleApplication1
             }
             streamwriter1.Close();
             streamwriter2.Close();
+            return 0;
         }//end of main
 
 

@@ -118,8 +118,8 @@ create a web server gateway interface (WSGI).
 and expressions allowed to include in HTML files. 
 - [_Flask-SocketIO_](https://flask-socketio.readthedocs.io/en/latest): offers bi-directional communications 
 with low latency between the clients (front-end) and the server (back-end) for _Flask_ applications.
-- [_python-engineio_](https://python-socketio.readthedocs.io/en/latest): implementation of the _Engine.IO_ in Python. 
-- [_python-socketio_](https://github.com/miguelgrinberg/python-engineio): library for real-time communication 
+- [_python-socketio_](https://python-socketio.readthedocs.io/en/latest): implementation of the _Engine.IO_ in Python. 
+- [_python-engineio_](https://github.com/miguelgrinberg/python-engineio): library for real-time communication 
 between client and server based on WebSocket. 
 - [_Eventlet_](https://eventlet.net): networking library for executing asynchronous tasks.
 

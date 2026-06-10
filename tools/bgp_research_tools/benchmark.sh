@@ -1,0 +1,2 @@
+#!/bin/bash
+time python3 example.py 256 > results256.txt; time python3 example.py 128 > results128.txt; time python3 example.py 64 > results64.txt; time python3 example.py 32 > results32.txt; time python3 example.py 16 > results16.txt; time python3 example.py 8 > results8.txt; time python3 example.py 4 > results4.txt; time python3 example.py 2 > results2.txt; time python3 example.py 1 > results1.txt;

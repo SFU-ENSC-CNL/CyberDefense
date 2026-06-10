@@ -264,10 +264,6 @@ print("hidden_size1 : " , hidden_size);
 
 
 
-
-
-
-
 ### Train the model ###
 for epoch in range(num_epochs):
     for i, (train, labels) in enumerate(train_loader):                        # load the data
