@@ -12,7 +12,9 @@
 
     This Python code (versions 3.6 and newer)
 """
-
+import glob
+import os
+import shutil
 # ==============================================
 # bgpGuard off-line module
 # ==============================================
@@ -76,9 +78,20 @@ def app_offline_classification(header_offLine, input_exp_key):
     rnn_seq = int(input_exp_key[9])
     print("--------------------Loading settings successfully-------------")
 
+
+    # Clean up for a fresh run
+    shutil.rmtree('./.workdir', ignore_errors=True)
+    del_list = glob.glob("./src/data_split/DUMP_*_out.txt")
+    for f in del_list:
+        os.unlink(f)
+
     collector_ripe = 'rrc04'
-    data_downloader_multi(start_date, end_date, site, collector_ripe)
-    output_file_list = feature_extractor_multi(start_date, end_date, site)
+
+    subprocess_cmd(f"python ./cyberdefense.py -d .workdir download -b {start_date} -e {end_date} -s RIPE -c rrc04")
+#    data_downloader_multi(start_date, end_date, site, collector_ripe)
+    subprocess_cmd(f"python ./cyberdefense.py -d .workdir extract -b {start_date} -e {end_date}")
+    output_file_list = [ os.path.basename(f) for f in glob.glob("./src/data_split/DUMP_*_out.txt")]
+    #output_file_list = feature_extractor_multi(start_date, end_date, site)
     # dataAdjustment(site, output_file_list)
     # output_file_list = ["DUMP_20030123_out.txt", "DUMP_20030124_out.txt", "DUMP_20030125_out.txt"]  # for debug
     labels = label_generator(start_date_anomaly, end_date_anomaly, start_time_anomaly, end_time_anomaly, site,

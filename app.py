@@ -162,12 +162,12 @@ def analyze_offline():
         print("--------------------Saving Results-begin--------------------------")
         # if not os.path.exists('./src/STAT/results.zip'):
         # zip results
-        zipObj = zipfile.ZipFile('./src/STAT/%s_results.zip' % ALGO, 'w')
+        zipObj = zipfile.ZipFile('./src/STAT/results.zip', 'w')
         zipObj.write('./src/STAT/train_test_stat.txt')
         # Use glob find the csv file with prefix "labels_"
         for file in glob.glob('./src/STAT/labels_*.csv'):
             zipObj.write(file)  # RIPE or Route Views
-        for file in glob.glob('./src/STAT/%s_results_*.csv' % ALGO):
+        for file in glob.glob('./src/STAT/results_*.csv'):
             zipObj.write(file)  # (* = cut_pct, site)
         # zipObj.write('./src/STAT/labels_*.csv')
         # zipObj.write('./src/STAT/results_*.csv')
@@ -189,7 +189,7 @@ def download_file():
     try:
         return send_file('./src/STAT/results.zip',
                          mimetype='application/zip',  # text/csv
-                         attachment_filename='Results_%s.zip' % time.strftime('%b_%d_%Y_%H_%M_%S', time.localtime()),
+                         download_name='Results_%s.zip' % time.strftime('%b_%d_%Y_%H_%M_%S', time.localtime()),
                          as_attachment=True)
     except FileNotFoundError:
         abort(404)

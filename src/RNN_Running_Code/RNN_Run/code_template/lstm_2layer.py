@@ -170,7 +170,7 @@ class RNN(nn.Module):
         return x
 
 rnn = RNN()
-start = time.clock()
+start = time.perf_counter()
 rnn.train()
 
 if torch.cuda.is_available():
@@ -230,7 +230,7 @@ for epoch in range(num_epochs):
          #   print ('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
            #        % (epoch + 1, num_epochs, i + 1, len(trainDataset) // batch_size, loss.item()))
 
-end = time.clock()
+end = time.perf_counter()
 
 
 ### Test the model using evaluation mode ###
