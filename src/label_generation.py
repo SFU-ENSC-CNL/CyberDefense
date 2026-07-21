@@ -2,6 +2,7 @@
 # May. 04, 2020
 
 import numpy as np
+import os
 
 
 ## Input
@@ -77,6 +78,7 @@ def label_generator(start_date_anomaly, end_date_anomaly, start_time_anomaly, en
     # Get the number of anomaly
     # num_anomaly = len(np.where(labels==1)[0])  # May be returned
     # print("Number of anomaly:", num_anomaly)
+    os.makedirs(f'src/STAT', exist_ok=True)
     np.savetxt('./src/STAT/labels_%s.csv' % site, labels, delimiter=',', fmt='%d')
 
     print("--------------------Label Generation-end----------------------\n")

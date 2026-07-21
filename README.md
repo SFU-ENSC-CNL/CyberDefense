@@ -2,6 +2,10 @@
   <img width="50%" src="./static/imgs/cyberDefense_logo.png" alt="CyberDefense logo">
 </p> -->
 
+# WARNING: This document mainly reflects  version 1.0 of CyberDefense.  It may or may not be up-to-date.
+
+See the wiki for additional more current information: https://github.com/zhida-li/CyberDefense/wiki
+
 <h1 align="center">
   CyberDefense: Tool for Detecting Network Anomalies and Intrusions
 </h1>

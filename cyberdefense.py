@@ -153,6 +153,7 @@ def main():
             #       This puts links into the program structure where the existing
             #       code expects certain data files to exist.
             #       -> remove when conversion is complete.
+            os.makedirs(f'src/data_split', exist_ok=True)
             res = os.path.islink(f'src/data_split/DUMP_{ymd}_out.txt')
             if res:
                 os.unlink(f'src/data_split/DUMP_{ymd}_out.txt')
