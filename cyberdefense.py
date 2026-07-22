@@ -201,6 +201,7 @@ def main():
     elif cmd.subcmd == 'run':
         cut_pct = cmd.c
         print("--------------------Experiment-Begin--------------------------")
+        os.makedirs(f'src/RNN_Running_Code/RNN_Run/dataset', exist_ok=True)
         subprocess_cmd("cd src/; \
                         cp ./data_split/train_%s_%s_n.csv ./data_split/test_%s_%s_n.csv ./RNN_Running_Code/RNN_Run/dataset/ ; \
                         cd RNN_Running_Code/RNN_Run/dataset/; \
