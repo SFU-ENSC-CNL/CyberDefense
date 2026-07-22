@@ -52,9 +52,9 @@ def configureCmdLineParser():
 
     label = subparser.add_parser('labelgen')
     label.add_argument('--ab',
-                       help='Anomaly begin date and time (YYYYMMDDTHH:MM, ex: 20230322T03:15')
+                       help='Anomaly begin date and time (YYYYMMDDTHHMM, ex: 20230322T0315')
     label.add_argument('--ae',
-                       help='Anomaly end date and time (YYYYMMDDTHH:MM, ex 20230322T03:15')
+                       help='Anomaly end date and time (YYYYMMDDTHHMM, ex 20230322T0315')
 
     partition = subparser.add_parser('partition')
     partition.add_argument('-c',
