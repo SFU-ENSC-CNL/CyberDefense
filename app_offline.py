@@ -90,7 +90,7 @@ def app_offline_classification(header_offLine, input_exp_key):
     subprocess_cmd(f"python ./cyberdefense.py -d .workdir download -b {start_date} -e {end_date} -s RIPE -c rrc04")
 #    data_downloader_multi(start_date, end_date, site, collector_ripe)
     subprocess_cmd(f"python ./cyberdefense.py -d .workdir extract -b {start_date} -e {end_date}")
-    output_file_list = [ os.path.basename(f) for f in glob.glob("./src/data_split/DUMP_*_out.txt")]
+    output_file_list = [ os.path.basename(f) for f in sorted(glob.glob("./src/data_split/DUMP_*_out.txt"))]
     #output_file_list = feature_extractor_multi(start_date, end_date, site)
     # dataAdjustment(site, output_file_list)
     # output_file_list = ["DUMP_20030123_out.txt", "DUMP_20030124_out.txt", "DUMP_20030125_out.txt"]  # for debug

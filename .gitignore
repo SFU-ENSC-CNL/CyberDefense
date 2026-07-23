@@ -132,6 +132,16 @@ src/STAT/sample.zip
 **/cyberdefense_work
 src/CSharp_Tool_BGP/ConsoleApplication1/bin/Release/DUMP_featureselection.txt
 
+.workdir
+src/data_split
+src/STAT
+src/mrtprocessor/cmake-build-debug
+src/RNN_Running_Code/RNN_Run/dataset
+*_accuracy.txt
+*_runtime.txt
+**/*.pkl
+src/RNN_Running_Code/RNN_Run/tmp/*
+
 #################################################
 # Temporary files
 #################################################
