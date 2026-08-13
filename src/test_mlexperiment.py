@@ -1,74 +1,59 @@
-#import unittest
 import mlexperiment
 import unittest
-import os
-import numpy as np
 import torch
+import json
+import math
 
 class TestMLExperiment(unittest.TestCase):
 
-    def test_mlexperiment_gru_5(self):
-        torch.manual_seed(1)
-        train_loader = mlexperiment.Loader("../test_data/train.csv",batch_size=5)
-        test_loader = mlexperiment.Loader("../test_data/test.csv",batch_size=5)
-        model = mlexperiment.RNN_GRU(hidden_size=32, num_layers=1, num_classes=2, input_lstm=41, batch_first=False, dropout=0.4)
-        experiment = mlexperiment.Exp("test",model,train_loader,test_loader,num_epochs=30)
-        experiment.train()
-        print("GRU-5")
-        experiment.test()
-        assert(True)
+    tol = 0.005
 
-    def test_mlexperiment_gru_10(self):
-        torch.manual_seed(1)
-        train_loader = mlexperiment.Loader("../test_data/train.csv",batch_size=10)
-        test_loader = mlexperiment.Loader("../test_data/test.csv",batch_size=10)
-        model = mlexperiment.RNN_GRU(hidden_size=32, num_layers=1, num_classes=2, input_lstm=41, batch_first=False, dropout=0.4)
-        experiment = mlexperiment.Exp("test",model,train_loader,test_loader,num_epochs=30)
-        experiment.train()
-        print("GRU-10")
-        experiment.test()
-        assert(True)
 
-    def test_mlexperiment_gru_20(self):
-        torch.manual_seed(1)
-        train_loader = mlexperiment.Loader("../test_data/train.csv",batch_size=20)
-        test_loader = mlexperiment.Loader("../test_data/test.csv",batch_size=20)
-        model = mlexperiment.RNN_GRU(hidden_size=32, num_layers=1, num_classes=2, input_lstm=41, batch_first=False, dropout=0.4)
-        experiment = mlexperiment.Exp("test",model,train_loader,test_loader,num_epochs=30)
-        experiment.train()
-        print("GRU-20")
-        experiment.test()
-        assert(True)
+    def test_GRU(self):
+        batches = [5,10,20]
+        layers = [ [32], [32,16], [80,32,16]]
+        collector = mlexperiment.StatsCollector()
+        for layer in layers:
+            for batch in batches:
+                name = "gru_layers:" + str(layer) + "_batch:" + str(batch)
+                torch.manual_seed(1)
+                train_loader = mlexperiment.Loader("../test_data/train.csv",batch_size=batch)
+                test_loader = mlexperiment.Loader("../test_data/test.csv",batch_size=batch)
+                model = mlexperiment.RNN_GRU(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41, batch_first=False, dropout=0.0)
+                experiment = mlexperiment.Exp(name,model,train_loader,test_loader,num_epochs=30,collector=collector)
+                experiment.train()
+                experiment.test()
 
-    def test_mlexperiment_lstm_5(self):
-        torch.manual_seed(1)
-        train_loader = mlexperiment.Loader("../test_data/train.csv",batch_size=5)
-        test_loader = mlexperiment.Loader("../test_data/test.csv",batch_size=5)
-        model = mlexperiment.RNN_LSTM(hidden_size=32, num_layers=1, num_classes=2, input_lstm=41, batch_first=False, dropout=0.4)
-        experiment = mlexperiment.Exp("test",model,train_loader,test_loader,num_epochs=30)
-        experiment.train()
-        print("LSTM-5")
-        experiment.test()
-        assert(True)
+        with open('../test_data/gru_gold.json') as f:
+            gold = json.load(f)
+            for key in gold:
+                self.assertTrue(key in collector.data)
+                (u, v) = collector.data[key]
+                (up, vp) = gold[key]
+                self.assertTrue(math.isclose(v,vp, rel_tol=TestMLExperiment.tol))
+                self.assertTrue(math.isclose(u,up, rel_tol=TestMLExperiment.tol))
 
-    def test_mlexperiment_lstm_10(self):
-        torch.manual_seed(1)
-        train_loader = mlexperiment.Loader("../test_data/train.csv", batch_size=10)
-        test_loader = mlexperiment.Loader("../test_data/test.csv", batch_size=10)
-        model = mlexperiment.RNN_LSTM(hidden_size=32, num_layers=1, num_classes=2, input_lstm=41, batch_first=False, dropout=0.4)
-        experiment = mlexperiment.Exp("test", model, train_loader, test_loader, num_epochs=30)
-        experiment.train()
-        print("LSTM-10")
-        experiment.test()
-        assert (True)
 
-    def test_mlexperiment_lstm_20(self):
-        torch.manual_seed(1)
-        train_loader = mlexperiment.Loader("../test_data/train.csv", batch_size=20)
-        test_loader = mlexperiment.Loader("../test_data/test.csv", batch_size=20)
-        model = mlexperiment.RNN_LSTM(hidden_size=32, num_layers=1, num_classes=2, input_lstm=41, batch_first=False, dropout=0.4)
-        experiment = mlexperiment.Exp("test", model, train_loader, test_loader, num_epochs=30)
-        experiment.train()
-        print("LSTM-20")
-        experiment.test()
-        assert (True)
+    def test_LSTM(self):
+        batches = [5,10,20]
+        layers = [ [32], [32,16], [80,32,16]]
+        collector = mlexperiment.StatsCollector()
+        for layer in layers:
+            for batch in batches:
+                name = "lstm_layers:" + str(layer) + "_batch:" + str(batch)
+                torch.manual_seed(1)
+                train_loader = mlexperiment.Loader("../test_data/train.csv",batch_size=batch)
+                test_loader = mlexperiment.Loader("../test_data/test.csv",batch_size=batch)
+                model = mlexperiment.RNN_LSTM(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41, batch_first=False, dropout=0.0)
+                experiment = mlexperiment.Exp(name,model,train_loader,test_loader,num_epochs=30, collector=collector)
+                experiment.train()
+                experiment.test()
+
+        with open('../test_data/lstm_gold.json') as f:
+            gold = json.load(f)
+            for key in gold:
+                self.assertTrue(key in collector.data)
+                (u, v) = collector.data[key]
+                (up, vp) = gold[key]
+                self.assertTrue(math.isclose(v,vp, rel_tol=TestMLExperiment.tol))
+                self.assertTrue(math.isclose(u,up, rel_tol=TestMLExperiment.tol))

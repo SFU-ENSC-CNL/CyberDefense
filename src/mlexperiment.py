@@ -6,6 +6,12 @@ import torch.nn.functional as F
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 
+class StatsCollector():
+    def __init__(self):
+        self.data = {}
+
+    def collect(self, key, value):
+        self.data[key] = value
 
 class Loader():
     def __init__(self, fname, batch_size=128, shuffle=False):
@@ -28,84 +34,95 @@ class Loader():
         self.data_loader = Data.DataLoader(dataset=torch_data, batch_size=self.batch_size, shuffle=self.shuffle)
 
 class RNN_GRU(nn.Module):
-    def __init__(self, hidden_size=128, num_layers=2, num_classes=2, input_lstm=128,batch_first=False,dropout=0.4):
+
+    def __init__(self, hidden_sizes=[128], num_layers=2, num_classes=2, input_sz=128, batch_first=False, dropout=0.4):
         super(RNN_GRU, self).__init__()
-        self.hidden_size = hidden_size
+        self.hidden_sizes = hidden_sizes
+        self.hidden_layers = nn.ModuleList()
         self.num_layers = num_layers
         self.num_classes = num_classes
-        self.input_lstm = input_lstm
+        self.input_lstm = input_sz
         self.batch_first = batch_first
         self.dropout = dropout
 
-        self.gru = nn.GRU(input_lstm, self.hidden_size, self.num_layers, batch_first=self.batch_first, dropout=self.dropout)
-
-        # Define ReLU layer
+        self.gru = nn.GRU(input_sz, self.hidden_sizes[0], self.num_layers, batch_first=self.batch_first, dropout=self.dropout)
         self.relu = nn.ReLU()
-
-        # Define the Dropout layer with 0.5 dropout rate
         self.keke_drop = nn.Dropout(p=0.5)
 
-        # Define a fully-connected layer fc4 with 32 inputs and 2 outputs
-        self.fc4 = nn.Linear(self.hidden_size, self.num_classes)
+        for k in range(len(self.hidden_sizes)):
+            if k < len(self.hidden_sizes)-1:
+                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.hidden_sizes[k+1]))
+            else:
+                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.num_classes))
 
     def forward(self, x):
         if torch.cuda.is_available():
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
         else:
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
 
-        x, _ = self.gru(x, h0)  # GRU network
+        x, _ = self.gru(x, h0)
+        x = self.relu(x)
+        for i, layer in enumerate(self.hidden_layers):
+            if i > 0:
+                x = self.keke_drop(x)
+            x = layer(x)
+            if i < len(self.hidden_layers) - 1:
+                x = self.relu(x)
 
-        x = self.relu(x)         # ReLU()
-
-        x = self.fc4(x)          # fully-connected layer
         return x
 
 class RNN_LSTM(nn.Module):
-    def __init__(self, hidden_size=128, num_layers=2, num_classes=2, input_lstm=128,batch_first=False,dropout=0.4):
+
+    def __init__(self, hidden_sizes=[128], num_layers=2, num_classes=2, input_sz=128, batch_first=False, dropout=0.4):
         super(RNN_LSTM, self).__init__()
-        self.hidden_size = hidden_size
+        self.hidden_sizes = hidden_sizes
+        self.hidden_layers = nn.ModuleList()
         self.num_layers = num_layers
         self.num_classes = num_classes
-        self.input_lstm = input_lstm
+        self.input_lstm = input_sz
         self.batch_first = batch_first
         self.dropout = dropout
 
-        self.lstm = nn.LSTM(input_lstm, self.hidden_size, self.num_layers, batch_first=self.batch_first, dropout=self.dropout)
-
-        # Define ReLU layer
+        self.lstm = nn.LSTM(input_sz, self.hidden_sizes[0], self.num_layers, batch_first=self.batch_first, dropout=self.dropout)
         self.relu = nn.ReLU()
-
-        # Define the Dropout layer with 0.5 dropout rate
         self.keke_drop = nn.Dropout(p=0.5)
 
-        # Define a fully-connected layer fc4 with 32 inputs and 2 outputs
-        self.fc4 = nn.Linear(self.hidden_size, self.num_classes)
+        for k in range(len(self.hidden_sizes)):
+            if k < len(self.hidden_sizes)-1:
+                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.hidden_sizes[k+1]))
+            else:
+                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.num_classes))
 
     def forward(self, x):
         if torch.cuda.is_available():
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
-            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
+            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
         else:
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
-            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
+            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
+            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
 
-        x, _ = self.lstm(x, (h0,c0))  # GRU network
+        x, _ = self.lstm(x, (h0, c0))
+        x = self.relu(x)
+        for i, layer in enumerate(self.hidden_layers):
+            if i > 0:
+                x = self.keke_drop(x)
+            x = layer(x)
+            if i < len(self.hidden_layers) - 1:
+                x = self.relu(x)        # fully-connected layer
 
-        x = self.relu(x)         # ReLU()
-
-        x = self.fc4(x)          # fully-connected layer
         return x
 
 class Exp:
 
-    def __init__(self, name, model, train_loader, test_loader, learningrate=0.001, num_epochs=10):
+    def __init__(self, name, model, train_loader, test_loader, learningrate=0.001, num_epochs=10, collector=None):
         self.name = name
         self.model = model
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.learningrate = learningrate
         self.num_epochs = num_epochs
+        self.collector = collector
 
     def train(self):
         self.model.train()
@@ -116,7 +133,6 @@ class Exp:
 
         loss = nn.CrossEntropyLoss()
         optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.learningrate)
-        #optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learningrate)
 
         for epoch in range(self.num_epochs):
             for idx, (data, target) in enumerate(self.train_loader.data_loader):
@@ -130,7 +146,6 @@ class Exp:
                 loss_value.backward()
                 optimizer.step()
 
-
     def test(self):
         self.model.eval()
 
@@ -142,25 +157,26 @@ class Exp:
             self.model.cuda()
         else:
             self.model.cpu()
-        for idx, (data, target) in enumerate(self.test_loader.data_loader):
-            if torch.cuda.is_available():
-                data, target = data.cuda(), target.cuda()
-            data = data.view(self.test_loader.batch_size, -1, 41)
-            output = self.model(data)
-            output = output.view(-1, 2)
-            output = F.softmax(output, dim=1)
-            _, predicted = torch.max(output.data, 1)
-            total += target.size(0)
-            correct += ( predicted == target).sum()
-            predicted_np = predicted.numpy()
-            yo.append(predicted_np)
+        with torch.no_grad():
+            for idx, (data, target) in enumerate(self.test_loader.data_loader):
+                if torch.cuda.is_available():
+                    data, target = data.cuda(), target.cuda()
+                data = data.view(data.size(0), -1, 41)
+                output = self.model(data)
+                output = output.view(-1, 2)
+                output = F.softmax(output, dim=1)
+                _, predicted = torch.max(output.data, 1)
+                total += target.size(0)
+                correct += ( predicted == target).sum()
+                predicted_np = predicted.numpy()
+                yo.append(predicted_np)
 
         yo = np.array([yo]).reshape(test_len, -1)
         yo_test = self.test_loader.ys.numpy()
         acc = accuracy_score(yo_test, yo)
         fScore = f1_score(yo_test, yo)
 
-        print("Accuracy: %.4f, Fsocre %.4f" % (acc*100, fScore*100))
+        if self.collector is not None:
+           self.collector.collect(self.name, (acc, fScore))
 
-
-
+        return (acc, fScore)
