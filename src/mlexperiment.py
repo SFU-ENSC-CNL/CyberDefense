@@ -49,11 +49,26 @@ class RNN_GRU(nn.Module):
         self.relu = nn.ReLU()
         self.keke_drop = nn.Dropout(p=0.5)
 
-        for k in range(len(self.hidden_sizes)):
-            if k < len(self.hidden_sizes)-1:
-                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.hidden_sizes[k+1]))
-            else:
-                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.num_classes))
+        if len(self.hidden_sizes) == 3:
+            # Reproduces a construction-order bug in the original gru_4layer.py
+            # template: it built fc4 (hidden_sizes[2] -> num_classes) *before*
+            # fc35 (hidden_sizes[1] -> hidden_sizes[2]). Since nn.Linear draws its
+            # initial weights from the shared global RNG at construction time,
+            # that swap changes every weight in the model relative to building
+            # the layers in logical order, even though shapes are identical.
+            # Build in the buggy order, but store in the correct forward-pass order.
+            fc3 = nn.Linear(self.hidden_sizes[0], self.hidden_sizes[1])
+            fc4 = nn.Linear(self.hidden_sizes[2], self.num_classes)
+            fc35 = nn.Linear(self.hidden_sizes[1], self.hidden_sizes[2])
+            self.hidden_layers.append(fc3)
+            self.hidden_layers.append(fc35)
+            self.hidden_layers.append(fc4)
+        else:
+            for k in range(len(self.hidden_sizes)):
+                if k < len(self.hidden_sizes)-1:
+                    self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.hidden_sizes[k+1]))
+                else:
+                    self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.num_classes))
 
     def forward(self, x):
         if torch.cuda.is_available():
@@ -62,7 +77,8 @@ class RNN_GRU(nn.Module):
             h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
 
         x, _ = self.gru(x, h0)
-        x = self.relu(x)
+        if len(self.hidden_layers) == 1:
+            x = self.relu(x)
         for i, layer in enumerate(self.hidden_layers):
             if i > 0:
                 x = self.keke_drop(x)
@@ -103,7 +119,8 @@ class RNN_LSTM(nn.Module):
             c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
 
         x, _ = self.lstm(x, (h0, c0))
-        x = self.relu(x)
+        if len(self.hidden_layers) == 1:
+            x = self.relu(x)
         for i, layer in enumerate(self.hidden_layers):
             if i > 0:
                 x = self.keke_drop(x)

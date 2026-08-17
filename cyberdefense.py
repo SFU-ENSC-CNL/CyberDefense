@@ -3,6 +3,8 @@ import logging
 import os
 import sys
 import pickle
+import mlexperiment
+import torch
 
 from datetime import date, timedelta
 
@@ -201,29 +203,37 @@ def main():
     elif cmd.subcmd == 'run':
         cut_pct = cmd.c
         print("--------------------Experiment-Begin--------------------------")
-        os.makedirs(f'src/RNN_Running_Code/RNN_Run/dataset', exist_ok=True)
-        subprocess_cmd("cd src/; \
-                        cp ./data_split/train_%s_%s_n.csv ./data_split/test_%s_%s_n.csv ./RNN_Running_Code/RNN_Run/dataset/ ; \
-                        cd RNN_Running_Code/RNN_Run/dataset/; \
-                        mv train_%s_%s_n.csv train.csv; mv test_%s_%s_n.csv test.csv; \
-                        cd ..; cd ..; \
-                        chmod +x integrate_run.sh; sh ./integrate_run.sh ; \
-                        cd RNN_Run/; sh ./collect.sh; \
-                        cp -r res_acc res_run ../data_representation/ ; \
-                        cd .. ; cd data_representation/ ; \
-                        python TableGenerator.py; " \
-                       % (cut_pct, site, cut_pct, site, cut_pct, site, cut_pct, site))
+        batches = [5,10,20]
+        layers = [ [32], [32,16], [80,32,16]]
+        collector = mlexperiment.StatsCollector()
+        for layer in layers:
+            for batch in batches:
+                name = "gru-" + str(len(layer)+1) + "-" + str(batch)
+                torch.manual_seed(1)
+                train_loader = mlexperiment.Loader("test_data/train.csv",batch_size=batch)
+                test_loader = mlexperiment.Loader("test_data/test.csv",batch_size=batch)
+                model = mlexperiment.RNN_GRU(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41, batch_first=False, dropout=0.0)
+                experiment = mlexperiment.Exp(name,model,train_loader,test_loader,num_epochs=30,collector=collector)
+                experiment.train()
+                experiment.test()
 
+                name = "lstm-" + str(len(layer)+1) + "-" + str(batch)
+                torch.manual_seed(1)
+                train_loader = mlexperiment.Loader("test_data/train.csv",batch_size=batch)
+                test_loader = mlexperiment.Loader("test_data/test.csv",batch_size=batch)
+                model = mlexperiment.RNN_LSTM(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41, batch_first=False, dropout=0.0)
+                experiment = mlexperiment.Exp(name,model,train_loader,test_loader,num_epochs=30,collector=collector)
+                experiment.train()
+                experiment.test()
         print("--------------------Experiment-end----------------------------")
-        subprocess_cmd("cd src/; \
-                        mv ./RNN_Running_Code/data_representation/data_representation_table.csv ./STAT/ ; \
-        				mv ./STAT/data_representation_table.csv ./STAT/results_%s_%s.csv" \
-                       % (cut_pct, site))
-
-        # Remove generated folders
-        subprocess_cmd("cd src/; \
-                        cd RNN_Running_Code/RNN_Run/; \
-                        #rm -rf ./experiment/ ./res_acc/ ./res_run/ ./tmp/")
+        with open(f'src/STAT/results_{cut_pct}.csv', 'w') as f:
+            for alg in ['lstm', 'gru']:
+                for layers in [2, 3, 4]:
+                    f.write(f'{alg}_{layers}layer,batch5_test,batch5_f-score,batch10_test,batch10_f-score,batch20_test,batch20_f-score\n')
+                    for batch in [5, 10, 20]:
+                        (acc, fscore) = collector.data[f'{alg}-{layers}-{batch}']
+                        f.write(f',{acc*100:.4f},{fscore*100:.4f}')
+                    f.write('\n')
 
     else:
         print("Unknown Command!")
