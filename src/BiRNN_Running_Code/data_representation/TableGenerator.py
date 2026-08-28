@@ -18,13 +18,13 @@ parent_dirname = os.path.basename(os.path.abspath('.'));
 
 
 header_list = [
-	"bi-lstm_2layer",
-	"bi-lstm_3layer",
-	"bi-lstm_4layer",
+	"lstm_2layer",
+	"lstm_3layer",
+	"lstm_4layer",
 
-	"bi-gru_2layer",
-	"bi-gru_3layer",
-	"bi-gru_4layer"
+	"gru_2layer",
+	"gru_3layer",
+	"gru_4layer"
 ];
 
 

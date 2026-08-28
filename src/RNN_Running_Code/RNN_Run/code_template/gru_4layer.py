@@ -47,10 +47,7 @@ blockPrint()
 
 ### Hyper parameters ####
 parent_dirname = os.path.basename(os.path.dirname(os.path.realpath(__file__)));
-
-
 num_feature = 41    # number of the features for input matrix
-
 
 if parent_dirname.find("5") != -1:
     batch_size = 5;
@@ -59,9 +56,7 @@ elif parent_dirname.find("10") != -1:
 else:
     batch_size = 20;
 
-
-
-sequence_length = batch_size     # length of the input time sequence
+sequence_length = batch_size
 input_size = num_feature
 input_lstm = num_feature
 
@@ -69,33 +64,20 @@ hidden_size = HIDDEN_SIZE_1_HERE    # hidden size for fc3
 hidden_size2 = HIDDEN_SIZE_2_HERE   # hidden size for fc35
 hidden_size3 = HIDDEN_SIZE_3_HERE   # hidden size for fc4
 num_layers = NUM_OF_LAYER_HERE      # number of layers for LSTM algorithm
-num_classes = 2     # number of the class
+num_classes = 2   # number of the class
 
-num_epochs = NUM_EPOCHS_HERE     # number of the epochs
+num_epochs = NUM_EPOCHS_HERE   # number of the epochs
 learning_rate = 0.001    # learning rate for optimization
-
-
-
-
-
-
-
-
 
 train_filename = next((f for f in os.listdir(parent_dirname) if f.endswith('train.csv')));
 test_filename = next((f for f in os.listdir(parent_dirname) if f.endswith('test.csv')));
 
-
 train_filename = str(os.path.abspath(parent_dirname)) + "/" + str(train_filename)
 test_filename = str(os.path.abspath(parent_dirname)) + "/" + str(test_filename)
-
 
 print (train_filename)
 print (test_filename)
 
-
-
-# Load the datasets, x: data, y: label
 trainDataset = np.loadtxt(train_filename, delimiter=",")
 train_data_x = trainDataset[:, 0:num_feature]
 train_label_y= trainDataset[:, num_feature]
@@ -104,37 +86,20 @@ testDataset = np.loadtxt(test_filename, delimiter=",")
 test_data_x = testDataset[:, 0:num_feature]
 test_label_y = testDataset[:, num_feature]
 
-
-
-
-
-
-
-
-
-
-
-
 # Convert numpy to torch tensor
 train_data_x, train_label_y = torch.from_numpy(train_data_x), torch.from_numpy(train_label_y)
 test_data_x, test_label_y = torch.from_numpy(test_data_x), torch.from_numpy(test_label_y)
 # Tensor
-# floatTensor for training data, and longTensor for the label
-train_data,test_data = train_data_x.type(torch.FloatTensor), test_data_x.type(torch.FloatTensor)   # FloatTensor = 32-bit floating
-train_label,test_label = train_label_y.type(torch.LongTensor),test_label_y.type(torch.LongTensor)  # LongTensor = 64-bit integer
+train_data,test_data = train_data_x.type(torch.FloatTensor), test_data_x.type(torch.FloatTensor)
+train_label,test_label = train_label_y.type(torch.LongTensor),test_label_y.type(torch.LongTensor)
 
 
 test_len = test_label.size()[0];
-
-
 
 # Data loader (input pipeline)
 torch_dataset_train = Data.TensorDataset(train_data,train_label)
 torch_dataset_test = Data.TensorDataset(test_data,test_label)
 
-
-
-#print torch_dataset_train,torch_dataset_test
 train_loader = Data.DataLoader(dataset=torch_dataset_train,  # torch TensorDataset format
                                batch_size=batch_size,
                                shuffle=False)
@@ -143,20 +108,17 @@ test_loader = Data.DataLoader(dataset=torch_dataset_test,
                               batch_size=batch_size,
                               shuffle=False)
 
-#### Build the deep learning models with 2 hidden layers (one layer: GRU, three layer: fc3, fc35, and fc4) ###
-
 class RNN(nn.Module):
     def __init__(self):
         super(RNN, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        # Define the LSTM module
         self.gru = nn.GRU(input_lstm, hidden_size, num_layers, batch_first=False, dropout=0.4)
-        
+
         # Define ReLU layer
         self.relu = nn.ReLU()
-        
+
         # Define the Dropout layer with 0.5 dropout rate
         self.keke_drop = nn.Dropout(p=0.5)
 
@@ -170,16 +132,12 @@ class RNN(nn.Module):
         self.fc35 =  nn.Linear(hidden_size2, hidden_size3)
 
     def forward(self, x):
-        # Set initial states: h_0 (num_layers * num_directions, batch, hidden_size)
-        # x=input (seq_len, batch, input_size)
         if torch.cuda.is_available():
             h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda()
         else:
             h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_size)
 
-        #c0 = Variable(torch.zeros(self.num_layers, x.size(1), self.hidden_size).cuda())
-
-        x, _ = self.gru(x, h0)        # GRU network
+        x, _ = self.gru(x, h0)  # GRU network
 
         x = self.relu(self.fc3(x))    # fully-connected layer with ReLU()
 
@@ -188,7 +146,6 @@ class RNN(nn.Module):
         x = self.keke_drop(x)
         x = self.fc4(x)               # fully-connected layer
         return x
-
 
 rnn = RNN()
 start = time.perf_counter()
@@ -202,32 +159,23 @@ else:
 criterion = nn.CrossEntropyLoss()
 
 # Select an optimizer
-optimizer = torch.optim.RMSprop(rnn.parameters(), lr=learning_rate)           # or Adam 
+optimizer = torch.optim.RMSprop(rnn.parameters(), lr=learning_rate)           # or Adam
 
-
-
-
-
-print ("batch size : " , batch_size);
-print ("test_len : " , test_len);
-print ("hidden_size1 : " , hidden_size);
-print ("hidden_size2 : " , hidden_size2);
-print ("hidden_size3 : " , hidden_size3);
-
-
-
+print("batch size : " , batch_size);
+print("test_len : " , test_len);
+print("hidden_size1 : " , hidden_size);
+print("hidden_size2 : " , hidden_size2);
+print("hidden_size3 : " , hidden_size3);
 
 ### Train the model ###
 for epoch in range(num_epochs):
     for i, (train, labels) in enumerate(train_loader):                        # load the data
-        
-
         if torch.cuda.is_available():
-            x = train.view(sequence_length, -1, input_lstm).cuda()      # reshape x to (time_step, batch, input_size)
-            y = labels.cuda()                                           # batch labels
+            x = train.view(sequence_length, -1, input_lstm).cuda()
+            y = labels.cuda()
         else:
-            x = train.view(sequence_length, -1, input_lstm)      # reshape x to (time_step, batch, input_size)
-            y = labels                                           # batch labels
+            x = train.view(sequence_length, -1, input_lstm)
+            y = labels
         # Forward + Backward + Optimize
         outputs = rnn(x)                                                      # RNN output
         outputs = outputs.view(-1, 2)
@@ -236,51 +184,38 @@ for epoch in range(num_epochs):
         loss.backward()                                                       # back-propagation, compute gradients
         optimizer.step()                                                      # apply gradients
 
-
 end = time.perf_counter()
-
 
 ### Test the model using evaluation mode ###
 correct = 0
 total = 0
 
-rnn.eval()          # evaluation mode for testing
+rnn.eval()  # evaluation mode for testing
 yo = []
 for test, l in test_loader:
-
     if torch.cuda.is_available():
         p = test.view(sequence_length, -1, input_lstm).cuda()
     else:
         p = test.view(sequence_length, -1, input_lstm)
-
-
     outputs2 = rnn(p)
     outputs2 = outputs2.view(-1, 2)
-    outputs2 = F.softmax(outputs2, dim=1)     # softmax function
-    # print 'output2 size:', outputs2.size()
-
+    outputs2 = F.softmax(outputs2, dim=1)
     _, predicted = torch.max(outputs2.data, 1)
     total += l.size(0)  # l.size(0)=100
     if torch.cuda.is_available():
         predicted = predicted.cpu()
-
     correct += (predicted == l).sum()
     predicted_np = predicted.numpy()
-    yo.append(predicted_np)                # predicted labels, yo shape is (1, 72, 100, 1)
+    yo.append(predicted_np)
 
-
-
-
-yo = np.array([yo]).reshape(test_len, -1)  
+yo = np.array([yo]).reshape(test_len, -1)
 yo_test = test_label_y.numpy()
 acc = accuracy_score(yo_test, yo)
 fScore = f1_score(yo_test, yo)
 
-
 # Save the accuracy and F-Score
 with open(parent_dirname + "_accuracy.txt", "w") as text_file:
     text_file.write("Accuracy: %.4f, Fsocre %.4f" % (acc*100, fScore*100))
-
 
 # Save the running time
 with open(parent_dirname + "_runtime.txt", "w") as text_file:
