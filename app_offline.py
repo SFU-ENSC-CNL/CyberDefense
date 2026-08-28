@@ -106,7 +106,7 @@ def app_offline_classification(header_offLine, input_exp_key):
 
     if ALGO == 'LSTM and GRU':
         # Clear up old results:
-        subprocess_cmd("rm src/STAT/result*.csv")
+        subprocess_cmd("rm -f src/STAT/result*.csv")
 
         print("--------------------Experiment-Begin--------------------------")
         batches = [5,10,20]
@@ -143,7 +143,7 @@ def app_offline_classification(header_offLine, input_exp_key):
 
     elif ALGO == 'Bi-LSTM and Bi-GRU':
         # Clear up old results:
-        subprocess_cmd("rm src/STAT/result*.csv")
+        subprocess_cmd("rm -f src/STAT/result*.csv")
 
         print("--------------------RNNs Experiment-Begin--------------------------")
         batches = [5,10,20]

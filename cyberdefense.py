@@ -204,7 +204,7 @@ def main():
 
     elif cmd.subcmd == 'run':
         # Clear up old results:
-        subprocess_cmd("rm src/STAT/result*.csv")
+        subprocess_cmd("rm -f src/STAT/result*.csv")
 
         cut_pct = cmd.c
         bidirectional = cmd.b
