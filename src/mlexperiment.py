@@ -35,7 +35,14 @@ class Loader():
 
 class RNN_GRU(nn.Module):
 
-    def __init__(self, hidden_sizes=[128], num_layers=2, num_classes=2, input_sz=128, batch_first=False, dropout=0.4):
+    def __init__(self,
+                 hidden_sizes=[128],
+                 num_layers=2,
+                 num_classes=2,
+                 input_sz=128,
+                 batch_first=False,
+                 dropout=0.4,
+                 bidrectional=False):
         super(RNN_GRU, self).__init__()
         self.hidden_sizes = hidden_sizes
         self.hidden_layers = nn.ModuleList()
@@ -44,37 +51,33 @@ class RNN_GRU(nn.Module):
         self.input_lstm = input_sz
         self.batch_first = batch_first
         self.dropout = dropout
+        self.bidrectional = bidrectional
 
-        self.gru = nn.GRU(input_sz, self.hidden_sizes[0], self.num_layers, batch_first=self.batch_first, dropout=self.dropout)
+        self.gru = nn.GRU(input_sz, self.hidden_sizes[0], self.num_layers, batch_first=self.batch_first, dropout=self.dropout, bidirectional=self.bidrectional)
         self.relu = nn.ReLU()
         self.keke_drop = nn.Dropout(p=0.5)
 
-        if len(self.hidden_sizes) == 3:
-            # Reproduces a construction-order bug in the original gru_4layer.py
-            # template: it built fc4 (hidden_sizes[2] -> num_classes) *before*
-            # fc35 (hidden_sizes[1] -> hidden_sizes[2]). Since nn.Linear draws its
-            # initial weights from the shared global RNG at construction time,
-            # that swap changes every weight in the model relative to building
-            # the layers in logical order, even though shapes are identical.
-            # Build in the buggy order, but store in the correct forward-pass order.
-            fc3 = nn.Linear(self.hidden_sizes[0], self.hidden_sizes[1])
-            fc4 = nn.Linear(self.hidden_sizes[2], self.num_classes)
-            fc35 = nn.Linear(self.hidden_sizes[1], self.hidden_sizes[2])
-            self.hidden_layers.append(fc3)
-            self.hidden_layers.append(fc35)
-            self.hidden_layers.append(fc4)
-        else:
-            for k in range(len(self.hidden_sizes)):
-                if k < len(self.hidden_sizes)-1:
-                    self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.hidden_sizes[k+1]))
-                else:
-                    self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.num_classes))
+        for k in range(len(self.hidden_sizes)):
+            if self.bidrectional and k == 0:
+                sz = self.hidden_sizes[k]*2
+            else:
+                sz = self.hidden_sizes[k]
+            if k < len(self.hidden_sizes)-1:
+                self.hidden_layers.append(nn.Linear(sz, self.hidden_sizes[k + 1]))
+            else:
+                self.hidden_layers.append(nn.Linear(sz, self.num_classes))
 
     def forward(self, x):
         if torch.cuda.is_available():
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
+            if self.bidrectional:
+                h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_sizes[0]).cuda()
+            else:
+                h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
         else:
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
+            if self.bidrectional:
+                h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_sizes[0])
+            else:
+                h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
 
         x, _ = self.gru(x, h0)
         if len(self.hidden_layers) == 1:
@@ -90,7 +93,14 @@ class RNN_GRU(nn.Module):
 
 class RNN_LSTM(nn.Module):
 
-    def __init__(self, hidden_sizes=[128], num_layers=2, num_classes=2, input_sz=128, batch_first=False, dropout=0.4):
+    def __init__(self,
+                 hidden_sizes=[128],
+                 num_layers=2,
+                 num_classes=2,
+                 input_sz=128,
+                 batch_first=False,
+                 dropout=0.4,
+                 bidrectional=False):
         super(RNN_LSTM, self).__init__()
         self.hidden_sizes = hidden_sizes
         self.hidden_layers = nn.ModuleList()
@@ -99,24 +109,37 @@ class RNN_LSTM(nn.Module):
         self.input_lstm = input_sz
         self.batch_first = batch_first
         self.dropout = dropout
+        self.bidrectional = bidrectional
 
-        self.lstm = nn.LSTM(input_sz, self.hidden_sizes[0], self.num_layers, batch_first=self.batch_first, dropout=self.dropout)
+        self.lstm = nn.LSTM(input_sz, self.hidden_sizes[0], self.num_layers, batch_first=self.batch_first, dropout=self.dropout, bidirectional=self.bidrectional)
         self.relu = nn.ReLU()
         self.keke_drop = nn.Dropout(p=0.5)
 
         for k in range(len(self.hidden_sizes)):
-            if k < len(self.hidden_sizes)-1:
-                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.hidden_sizes[k+1]))
+            if self.bidrectional and k == 0:
+                sz = self.hidden_sizes[k]*2
             else:
-                self.hidden_layers.append(nn.Linear(self.hidden_sizes[k], self.num_classes))
+                sz = self.hidden_sizes[k]
+            if k < len(self.hidden_sizes)-1:
+                self.hidden_layers.append(nn.Linear(sz, self.hidden_sizes[k + 1]))
+            else:
+                self.hidden_layers.append(nn.Linear(sz, self.num_classes))
 
     def forward(self, x):
         if torch.cuda.is_available():
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
-            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
+            if self.bidrectional:
+                h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_sizes[0]).cuda()
+                c0 = torch.zeros(self.num_layers * 2, x.size(1), self.hidden_sizes[0]).cuda()
+            else:
+                h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
+                c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0]).cuda()
         else:
-            h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
-            c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
+            if self.bidrectional:
+                h0 = torch.zeros(self.num_layers*2, x.size(1), self.hidden_sizes[0])
+                c0 = torch.zeros(self.num_layers * 2, x.size(1), self.hidden_sizes[0])
+            else:
+                h0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
+                c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_sizes[0])
 
         x, _ = self.lstm(x, (h0, c0))
         if len(self.hidden_layers) == 1:

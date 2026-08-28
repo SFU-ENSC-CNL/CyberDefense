@@ -41,7 +41,8 @@ def configureCmdLineParser():
     download.add_argument('-c', '--collector',
                         help='Collector, default rrc04',
                         default='rrc04')
-    download.add_argument('-s', '--source')
+    download.add_argument('-s', '--source', default='ripe',
+                        help='Source, default ripe')
 
     features = subparser.add_parser('extract')
     features.add_argument('-b', '--begindate', type=parse_date,
@@ -71,6 +72,7 @@ def configureCmdLineParser():
     run = subparser.add_parser('run')
     run.add_argument('-c',
                      help='Cut Percentage')
+    run.add_argument('-b', action="store_true", default=False, help='Bi-directional')
 
 
     return cmdparser
@@ -201,7 +203,16 @@ def main():
         normTrainTest(cmd.c, site)
 
     elif cmd.subcmd == 'run':
+        # Clear up old results:
+        subprocess_cmd("rm src/STAT/result*.csv")
+
         cut_pct = cmd.c
+        bidirectional = cmd.b
+        if bidirectional:
+            dirtxt = "bidir"
+        else:
+            dirtxt = "unidir"
+
         print("--------------------Experiment-Begin--------------------------")
         batches = [5,10,20]
         layers = [ [32], [32,16], [80,32,16]]
@@ -210,23 +221,25 @@ def main():
             for batch in batches:
                 name = "gru-" + str(len(layer)+1) + "-" + str(batch)
                 torch.manual_seed(1)
-                train_loader = mlexperiment.Loader("test_data/train.csv",batch_size=batch)
-                test_loader = mlexperiment.Loader("test_data/test.csv",batch_size=batch)
-                model = mlexperiment.RNN_GRU(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41, batch_first=False, dropout=0.0)
+                train_loader = mlexperiment.Loader(f"src/data_split/train_{cut_pct}_{site}_n.csv",batch_size=batch)
+                test_loader = mlexperiment.Loader(f"src/data_split/test_{cut_pct}_{site}_n.csv",batch_size=batch)
+                model = mlexperiment.RNN_GRU(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41,
+                                             batch_first=False, dropout=0.0, bidrectional=bidirectional)
                 experiment = mlexperiment.Exp(name,model,train_loader,test_loader,num_epochs=30,collector=collector)
                 experiment.train()
                 experiment.test()
 
                 name = "lstm-" + str(len(layer)+1) + "-" + str(batch)
                 torch.manual_seed(1)
-                train_loader = mlexperiment.Loader("test_data/train.csv",batch_size=batch)
-                test_loader = mlexperiment.Loader("test_data/test.csv",batch_size=batch)
-                model = mlexperiment.RNN_LSTM(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41, batch_first=False, dropout=0.0)
+                train_loader = mlexperiment.Loader(f"src/data_split/train_{cut_pct}_{site}_n.csv",batch_size=batch)
+                test_loader = mlexperiment.Loader(f"src/data_split/test_{cut_pct}_{site}_n.csv",batch_size=batch)
+                model = mlexperiment.RNN_LSTM(hidden_sizes=layer, num_layers=1, num_classes=2, input_sz=41,
+                                              batch_first=False, dropout=0.0, bidrectional=bidirectional)
                 experiment = mlexperiment.Exp(name,model,train_loader,test_loader,num_epochs=30,collector=collector)
                 experiment.train()
                 experiment.test()
         print("--------------------Experiment-end----------------------------")
-        with open(f'src/STAT/results_{cut_pct}.csv', 'w') as f:
+        with open(f'src/STAT/results_{cut_pct}_{dirtxt}.csv', 'w') as f:
             for alg in ['lstm', 'gru']:
                 for layers in [2, 3, 4]:
                     f.write(f'{alg}_{layers}layer,batch5_test,batch5_f-score,batch10_test,batch10_f-score,batch20_test,batch20_f-score\n')
